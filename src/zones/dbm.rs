@@ -706,7 +706,7 @@ impl DBM<Valid> {
     }
 
     // Based on the UDBM implementation
-    fn update_dbm(&mut self, src: &DBM<Valid>, dst_to_src: &Vec<ClockIndex>) {
+    pub fn update_dbm(&mut self, src: &DBM<Valid>, dst_to_src: &Vec<ClockIndex>) {
         self.data[0] = LE_ZERO;
 
         // Clocks [0,j]
