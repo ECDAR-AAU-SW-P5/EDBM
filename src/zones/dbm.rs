@@ -677,30 +677,31 @@ impl DBM<Valid> {
     }
 
     // Based on the UDBM implementation
-    fn compute_tables(&self, src_clocks: &Vec<bool>, dst_clocks: &Vec<bool>) -> (Vec<ClockIndex>, Vec<ClockIndex>) {
+    pub fn compute_tables(
+        src_clocks: &Vec<bool>,
+        dst_clocks: &Vec<bool>,
+    ) -> (Vec<ClockIndex>, Vec<ClockIndex>) {
         let mut dst_to_src = Vec::<ClockIndex>::default();
         let mut src_to_dst = Vec::<ClockIndex>::default();
         let mut src_ind = 0;
         assert_eq!(src_clocks.len(), dst_clocks.len());
 
-        for (src, dst) in src_clocks.iter().zip(dst_clocks.iter()){
+        for (src, dst) in src_clocks.iter().zip(dst_clocks.iter()) {
             if *dst {
                 src_to_dst.push(dst_to_src.len());
                 if *src {
                     dst_to_src.push(src_ind);
-                }
-                else {
+                } else {
                     dst_to_src.push(0);
                 }
-            }
-            else {
+            } else {
                 src_to_dst.push(0);
             }
 
             if *src {
                 src_ind += 1;
             }
-        };
+        }
 
         return (src_to_dst, dst_to_src);
     }
@@ -711,33 +712,30 @@ impl DBM<Valid> {
 
         // Clocks [0,j]
         for j in 1..self.dim {
-            if dst_to_src[j] == 0
-            {
+            if dst_to_src[j] == 0 {
                 self.data[j] = LE_ZERO;
-            }
-            else
-            {
+            } else {
                 self.data[j] = src.data[dst_to_src[j]];
             }
         }
 
         for i in 1..self.dim {
-            if dst_to_src[i] != 0 { // If copy from src.
+            if dst_to_src[i] != 0 {
+                // If copy from src.
                 let constraint0 = src.data[src.dim * dst_to_src[i]];
                 // Clock [i, 0]
                 self.data[i * self.dim] = constraint0;
 
                 for j in 1..self.dim {
-                    if dst_to_src[j] == 0
-                    {
+                    if dst_to_src[j] == 0 {
                         self.data[j + i * self.dim] = constraint0;
-                    }
-                    else {
-                        self.data[j + i * self.dim] = src.data[dst_to_src[j] + src.dim * dst_to_src[i]];
+                    } else {
+                        self.data[j + i * self.dim] =
+                            src.data[dst_to_src[j] + src.dim * dst_to_src[i]];
                     }
                 }
-            }
-            else { // Insert new row.
+            } else {
+                // Insert new row.
                 for j in 0..self.dim {
                     self.data[j + i * self.dim] = LS_INFINITY;
                 }
@@ -763,9 +761,13 @@ impl DBM<Valid> {
     /// dst_clocks: [true, true, true, false, false, true, true]
     /// It will also return a mapping of the src clocks to the dst clocks.
     /// src_to_dst: [0, 1, 2, 0, 0, 2, 2]
-    pub fn shrink_expand(&self, src_clocks: &Vec<bool>, dst_clocks: &Vec<bool>) -> (DBM<Valid>, Vec<ClockIndex>) {
+    pub fn shrink_expand(
+        &self,
+        src_clocks: &Vec<bool>,
+        dst_clocks: &Vec<bool>,
+    ) -> (DBM<Valid>, Vec<ClockIndex>) {
         assert_eq!(src_clocks.len(), dst_clocks.len());
-        let (src_to_dst, dst_to_src) = self.compute_tables(src_clocks, dst_clocks);
+        let (src_to_dst, dst_to_src) = DBM::compute_tables(src_clocks, dst_clocks);
         let mut dst = DBM::init(dst_to_src.len());
         dst.update_dbm(self, &dst_to_src);
         return (dst, src_to_dst);
@@ -1391,10 +1393,10 @@ impl<T: DBMState> Display for DBM<T> {
 
 #[cfg(test)]
 mod test {
-    use crate::util::constraints::Inequality::LE;
-    use crate::util::constraints::{Bound};
-    use crate::util::constraints::raw_constants::{LE_ZERO, LS_INFINITY};
     use super::DBM;
+    use crate::util::constraints::raw_constants::{LE_ZERO, LS_INFINITY};
+    use crate::util::constraints::Bound;
+    use crate::util::constraints::Inequality::LE;
     use crate::zones::rand_gen::random_dbm;
     use crate::zones::DBMRelation;
 
@@ -1468,7 +1470,7 @@ mod test {
     }
 
     #[test]
-    fn dbm_shrink_expand(){
+    fn dbm_shrink_expand() {
         let mut src = DBM::init(5);
         for i in 1..25 {
             src.data[i] = From::from(LE(i as Bound));
@@ -1501,7 +1503,7 @@ mod test {
     }
 
     #[test]
-    fn dbm_shrink(){
+    fn dbm_shrink() {
         let mut src = DBM::init(5);
         for i in 1..25 {
             src.data[i] = From::from(LE(i as Bound));
