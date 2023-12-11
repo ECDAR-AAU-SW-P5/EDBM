@@ -50,6 +50,45 @@ impl<T: ImmutableDBM> Federation<T> {
         }
     }
 
+    // Based on the UDBM implementation
+    /// 0,      1,      2,      3,      4
+    /// 5,      6,      7,      8,      9
+    /// 10,     11,     12,     13,     14
+    /// 15,     16,     17,     18,     19
+    /// 20,     21,     22,     23,     24
+    /// is redrawn into
+    /// 0,      1,      4,       0,      0
+    /// 5,      0,      9,       5,      5
+    /// 10,     11,     0,       10,     10
+    /// inf,    inf,    inf,     0,      inf
+    /// inf,    inf,    inf,     inf,    0
+    /// With clock inputs
+    /// src_clocks: [true, true, true, true, true, false, false]
+    /// dst_clocks: [true, true, true, false, false, true, true]
+    /// It will also return a mapping of the src clocks to the dst clocks.
+    /// src_to_dst: [0, 1, 2, 0, 0, 2, 2]
+    pub fn shrink_expand(
+        &self,
+        src_clocks: &Vec<bool>,
+        dst_clocks: &Vec<bool>,
+    ) -> (OwnedFederation, Vec<ClockIndex>) {
+        assert_eq!(src_clocks.len(), dst_clocks.len());
+        let (src_to_dst, dst_to_src) = DBM::compute_tables(src_clocks, dst_clocks);
+
+        let dbms = self
+            .dbms
+            .iter()
+            .map(|src| {
+                let mut dst = DBM::init(dst_to_src.len());
+                dst.update_dbm(src.as_valid_ref(), &dst_to_src);
+                dst
+            })
+            .collect();
+        let dst = Federation::from_dbms(dst_to_src.len(), dbms);
+
+        return (dst, src_to_dst);
+    }
+
     /// Returns the clock bounds of the federation.
     pub fn get_bounds(&self) -> Bounds {
         let mut bounds = Bounds::new(self.dim);

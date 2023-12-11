@@ -39,7 +39,7 @@ pub fn worst_value(
 pub fn dbm_list_union(mut left: Vec<DBM<Valid>>, mut right: Vec<DBM<Valid>>) -> Vec<DBM<Valid>> {
     let mut i = 0;
 
-    'i: while i < left.len() {  
+    'i: while i < left.len() {
         let mut j = 0;
         while j < right.len() {
             match left[i].relation_to(&right[j]) {
