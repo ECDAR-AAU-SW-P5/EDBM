@@ -697,14 +697,16 @@ impl DBM<Valid> {
                 src_to_dst.push(0);
             }
 
-            src_ind += 1;
+            if *src {
+                src_ind += 1;
+            }
         };
 
         return (src_to_dst, dst_to_src);
     }
 
     // Based on the UDBM implementation
-    fn update_dbm(&mut self, src: &DBM<Valid>, dst_to_src: &Vec<ClockIndex>) {
+    pub fn update_dbm(&mut self, src: &DBM<Valid>, dst_to_src: &Vec<ClockIndex>) {
         self.data[0] = LE_ZERO;
 
         // Clocks [0,j]
@@ -757,10 +759,10 @@ impl DBM<Valid> {
     /// inf,    inf,    inf,     0,      inf
     /// inf,    inf,    inf,     inf,    0
     /// With clock inputs
-    /// src_clocks: [true, true, true, false, false, false, false]
+    /// src_clocks: [true, true, true, true, true, false, false]
     /// dst_clocks: [true, true, true, false, false, true, true]
     /// It will also return a mapping of the src clocks to the dst clocks.
-    /// src_to_dst: [0, 1, 2, 0, 0, 3, 4]
+    /// src_to_dst: [0, 1, 2, 0, 0, 2, 2]
     pub fn shrink_expand(&self, src_clocks: &Vec<bool>, dst_clocks: &Vec<bool>) -> (DBM<Valid>, Vec<ClockIndex>) {
         assert_eq!(src_clocks.len(), dst_clocks.len());
         let (src_to_dst, dst_to_src) = self.compute_tables(src_clocks, dst_clocks);
@@ -1472,7 +1474,7 @@ mod test {
             src.data[i] = From::from(LE(i as Bound));
         }
 
-        let src_bit = vec![true, true, false, false, true, false, false];
+        let src_bit = vec![true, true, true, true, true, false, false];
         let dst_bit = vec![true, true, false, false, true, true, true];
         let (dst, src_to_dst) = src.shrink_expand(&src_bit, &dst_bit);
 
@@ -1505,8 +1507,9 @@ mod test {
             src.data[i] = From::from(LE(i as Bound));
         }
 
-        let src_bit = vec![true, true, false, false, true];
-        let (dst, src_to_dst) = src.shrink_expand(&src_bit, &src_bit);
+        let src_bit = vec![true, true, true, true, true];
+        let dst_bit = vec![true, true, false, false, true];
+        let (dst, src_to_dst) = src.shrink_expand(&src_bit, &dst_bit);
 
         assert_eq!(dst.dim, 3);
         for i in 0..3 {
